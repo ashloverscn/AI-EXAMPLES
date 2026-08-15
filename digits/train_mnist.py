@@ -73,7 +73,7 @@ def main():
     print(f"Using device: {device}")
     
     batch_size = 64
-    epochs = 10
+    epochs = 18
     learning_rate = 0.001
 
     dataset_path = "./dataset/train"
