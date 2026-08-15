@@ -3,13 +3,22 @@ from torchvision import datasets
 
 def extract_mnist_to_images():
     images_dir = "./dataset/train"
+    
+    # Check if images are already extracted and non-empty across all classes
+    all_exist = True
     for i in range(10):
-        os.makedirs(os.path.join(images_dir, str(i)), exist_ok=True)
+        class_dir = os.path.join(images_dir, str(i))
+        if not os.path.exists(class_dir) or len(os.listdir(class_dir)) == 0:
+            all_exist = False
+            break
 
-    # Check if images are already extracted
-    if os.path.exists(images_dir) and len(os.listdir(os.path.join(images_dir, "0"))) > 0:
+    if all_exist:
         print("[INFO] Extracted image dataset already exists at './dataset/train/'. Skipping extraction.")
         return
+
+    # Create directories
+    for i in range(10):
+        os.makedirs(os.path.join(images_dir, str(i)), exist_ok=True)
 
     print("Downloading/Loading raw MNIST dataset using torchvision...")
     raw_dataset = datasets.MNIST(root='./data', train=True, download=True)
