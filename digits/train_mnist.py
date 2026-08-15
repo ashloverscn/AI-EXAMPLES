@@ -73,8 +73,8 @@ def main():
     print(f"Using device: {device}")
     
     batch_size = 64
-    epochs = 18
-    learning_rate = 0.001
+    epochs = 10  # Additional epochs for fine-tuning/continuation
+    learning_rate = 0.0005  # Lower learning rate for fine-tuning existing weights
 
     dataset_path = "./dataset/train"
     if not os.path.exists(dataset_path):
@@ -98,11 +98,21 @@ def main():
 
     # --- 4. Initialize Enhanced Model, Loss, and Optimizer ---
     model = EnhancedResCNN().to(device)
+    
+    # Load previously trained weights if available
+    MODEL_PATH = "mnist_cnn.pth"
+    if os.path.exists(MODEL_PATH):
+        print(f"Loading existing weights from '{MODEL_PATH}' to resume training...")
+        model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+        print("Weights loaded successfully!")
+    else:
+        print(f"[Warning] '{MODEL_PATH}' not found. Training a brand new model from scratch.")
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # --- 5. Training Loop ---
-    print(f"\nStarting training with Enhanced ResNet Architecture for {epochs} epochs...")
+    print(f"\nResuming training with Enhanced ResNet Architecture for {epochs} additional epochs...")
     model.train()
     
     for epoch in range(epochs):
@@ -130,9 +140,9 @@ def main():
         epoch_acc = 100. * correct / total
         print(f"--- Epoch {epoch+1} Complete | Loss: {running_loss/len(train_loader):.4f} | Accuracy: {epoch_acc:.2f}% ---")
 
-    # --- 6. Save Model Weights ---
-    torch.save(model.state_dict(), "mnist_cnn.pth")
-    print("\nTraining complete! Enhanced model weights successfully saved as 'mnist_cnn.pth'.")
+    # --- 6. Save Updated Model Weights ---
+    torch.save(model.state_dict(), MODEL_PATH)
+    print(f"\nTraining continued successfully! Updated weights saved to '{MODEL_PATH}'.")
 
 if __name__ == '__main__':
     main()
