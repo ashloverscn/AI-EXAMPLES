@@ -4,6 +4,14 @@ import cv2
 import numpy as np
 import os
 
+# --- EMNIST Balanced Character Mapping (47 Classes) ---
+EMNIST_CLASSES = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    'a', 'b', 'd', 'e', 'f', 'g', 'h', 'n', 'q', 'r', 't'
+]
+
 # --- 1. Enhanced Residual Block & Model Architecture ---
 class ResidualBlock(nn.Module):
     def __init__(self, channels):
@@ -27,7 +35,7 @@ class ResidualBlock(nn.Module):
 
 
 class EnhancedResCNN(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes=47):
         super(EnhancedResCNN, self).__init__()
         
         self.initial_conv = nn.Sequential(
@@ -50,7 +58,7 @@ class EnhancedResCNN(nn.Module):
         
         self.fc1 = nn.Linear(64 * 7 * 7, 128)
         self.dropout = nn.Dropout(0.4)
-        self.fc2 = nn.Linear(128, num_classes)
+        self.fc2 = nn.Linear(128, num_classes)  # 47 classes
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
@@ -104,29 +112,19 @@ def preprocess_image(img):
     else:
         return None
 
-    # Normalization matching the training pipeline
     img_tensor = img.astype(np.float32) / 255.0
     img_tensor = (img_tensor - 0.1307) / 0.3081
     return torch.from_numpy(img_tensor).unsqueeze(0).unsqueeze(0)
 
 
 def main():
-    dataset_path = "./dataset/train"
-    if not os.path.exists(dataset_path):
-        print(f"Error: Dataset directory '{dataset_path}' not found!")
-        return
-
-    # Automatically read folder names sorted alphabetically to map indices to characters exactly like ImageFolder does
-    emnist_classes = sorted([d for d in os.listdir(dataset_path) if os.path.isdir(os.path.join(dataset_path, d))])
-    num_classes = len(emnist_classes)
-    print(f"Loaded {num_classes} character classes dynamically from folders.")
-
     device = torch.device("cpu")
+    num_classes = len(EMNIST_CLASSES)
     model = EnhancedResCNN(num_classes=num_classes).to(device)
     
     MODEL_PATH = "emnist_cnn.pth"
     if not os.path.exists(MODEL_PATH):
-        print(f"Error: Weights file '{MODEL_PATH}' not found! Please run your EMNIST training script first.")
+        print(f"Error: Weights file '{MODEL_PATH}' not found!")
         return
         
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
@@ -177,7 +175,7 @@ def main():
                     
                     pred_idx = predicted.item()
                     conf_score = confidence.item()
-                    pred_char = emnist_classes[pred_idx] if pred_idx < len(emnist_classes) else str(pred_idx)
+                    pred_char = EMNIST_CLASSES[pred_idx] if pred_idx < len(EMNIST_CLASSES) else str(pred_idx)
                     
                     print(f"--> Detected Character: {pred_char}  (Confidence: {conf_score:.2f})")
                     cv2.setWindowTitle(window_name, f"Prediction: {pred_char} ({conf_score:.2f})")
