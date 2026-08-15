@@ -7,9 +7,8 @@ import os
 # --- EMNIST Balanced Character Mapping (47 Classes) ---
 EMNIST_CLASSES = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-    'A', 'B', 'C / c', 'D', 'E', 'F', 'G', 'H', 'I / i', 'J / j', 
-    'K / k', 'L / l', 'M / m', 'N', 'O / o', 'P / p', 'Q', 'R', 
-    'S / s', 'T', 'U / u', 'V / v', 'W / w', 'X / x', 'Y / y', 'Z / z',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     'a', 'b', 'd', 'e', 'f', 'g', 'h', 'n', 'q', 'r', 't'
 ]
 
