@@ -4,23 +4,61 @@ import torch.nn as nn
 import numpy as np
 import os
 
-# --- 1. Define Model Architecture ---
-class SimpleCNN(nn.Module):
-    def __init__(self):
-        super(SimpleCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 10)
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
+# --- 1. Enhanced Residual Block & Model Architecture ---
+class ResidualBlock(nn.Module):
+    def __init__(self, channels):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(channels)
 
     def forward(self, x):
-        x = self.relu(self.conv1(x))
-        x = self.pool(x)
-        x = self.relu(self.conv2(x))
-        x = self.pool(x)
+        residual = x
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out += residual
+        out = self.relu(out)
+        return out
+
+
+class EnhancedResCNN(nn.Module):
+    def __init__(self):
+        super(EnhancedResCNN, self).__init__()
+        
+        self.initial_conv = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        
+        self.res_block1 = ResidualBlock(32)
+        
+        self.mid_conv = nn.Sequential(
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        
+        self.res_block2 = ResidualBlock(64)
+        
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.dropout = nn.Dropout(0.4)
+        self.fc2 = nn.Linear(128, 10)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.initial_conv(x)
+        x = self.res_block1(x)
+        x = self.mid_conv(x)
+        x = self.res_block2(x)
+        
         x = x.view(-1, 64 * 7 * 7)
         x = self.relu(self.fc1(x))
         x = self.dropout(x)
@@ -88,7 +126,7 @@ def enhance_and_preprocess_roi(roi_bgr):
             left = (28 - new_w) // 2
             final_img[top:top+new_h, left:left+new_w] = digit_crop
             
-            # Normalize to match MNIST training spec
+            # Normalize to match MNIST training spec & EnhancedResCNN normalization
             img_tensor = final_img.astype(np.float32) / 255.0
             img_tensor = (img_tensor - 0.1307) / 0.3081
             return torch.from_numpy(img_tensor).unsqueeze(0).unsqueeze(0), thresh
@@ -97,7 +135,7 @@ def enhance_and_preprocess_roi(roi_bgr):
 
 def main():
     device = torch.device("cpu")
-    model = SimpleCNN().to(device)
+    model = EnhancedResCNN().to(device)
     
     MODEL_PATH = "mnist_cnn.pth"
     if not os.path.exists(MODEL_PATH):
@@ -144,7 +182,7 @@ def main():
         roi = display_frame[box_y1:box_y2, box_x1:box_x2]
         input_tensor, filtered_thresh = enhance_and_preprocess_roi(roi)
         
-        # Optional: Show the real-time thresholded/filtered binary view in a small sub-window or corner
+        # Show the real-time thresholded/filtered binary view in the top-left corner
         filtered_colored = cv2.cvtColor(filtered_thresh, cv2.COLOR_GRAY2BGR)
         filtered_resized = cv2.resize(filtered_colored, (100, 100))
         display_frame[10:110, 10:110] = filtered_resized
