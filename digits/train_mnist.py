@@ -73,7 +73,7 @@ def main():
     print(f"Using device: {device}")
     
     batch_size = 64
-    epochs = 10  # Additional epochs for fine-tuning/continuation
+    epochs = 18  # Additional epochs for fine-tuning/continuation
     learning_rate = 0.0005  # Lower learning rate for fine-tuning existing weights
 
     dataset_path = "./dataset/train"
