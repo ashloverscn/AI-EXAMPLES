@@ -1,3 +1,4 @@
+import json
 import os
 import torch
 import torchvision
@@ -11,12 +12,23 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # 1. Prepare test dataset from the image folder to grab correct class names
+    # 1. Load classes from classes.json
+    classes_json_path = "./classes.json"
+    if not os.path.exists(classes_json_path):
+        print(
+            f"Error: Classes file not found at {classes_json_path}. Please run train.py first."
+        )
+        return
+
+    with open(classes_json_path, "r") as f:
+        classes = json.load(f)
+    print(f"Loaded {len(classes)} classes from {classes_json_path}.")
+
+    # 2. Prepare test dataset from the image folder
     test_dir = "./dataset/test"
     if not os.path.exists(test_dir):
         print(
-            f"Error: Test directory not found at {test_dir}. Please run your"
-            " downloader script first."
+            f"Error: Test directory not found at {test_dir}. Please run your downloader script first."
         )
         return
 
@@ -35,14 +47,11 @@ def main():
         testset, batch_size=8, shuffle=True
     )
 
-    classes = testset.classes
-
-    # 2. Load the trained weights from root directory
+    # 3. Load the trained weights from root directory
     model_path = "./cifar_cnn.pth"
     if not os.path.exists(model_path):
         print(
-            f"Error: Model weights not found at {model_path}. Please run train.py"
-            " first."
+            f"Error: Model weights not found at {model_path}. Please run train.py first."
         )
         return
 
@@ -51,7 +60,7 @@ def main():
     model.eval()
     print("Model weights loaded successfully.")
 
-    # 3. Grab a batch and run inference
+    # 4. Grab a batch and run inference
     dataiter = iter(testloader)
     images, labels = next(dataiter)
 

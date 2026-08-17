@@ -1,19 +1,58 @@
-import sys
+import json
 import os
+import sys
 import cv2
 import numpy as np
 import torch
+import torch.nn as nn
 import torchvision.transforms as transforms
 from PyQt5.QtCore import Qt, QTimer, QPoint
 from PyQt5.QtGui import QPainter, QPen, QColor, QFont
 from PyQt5.QtWidgets import QApplication, QWidget
 from mss import mss
 
-# Import the model class matching train.py
-from train import CIFARClassifierCNN as SimpleCNN
-
 MODEL_PATH = "./cifar_cnn.pth"
+CLASSES_JSON_PATH = "./classes.json"
 MARGIN = 10  # Edge threshold in pixels for resizing
+
+
+# Define the exact same architecture matching train.py
+class CIFARClassifierCNN(nn.Module):
+    def __init__(self, num_classes):
+        super(CIFARClassifierCNN, self).__init__()
+
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),  # Output: 64 x 16 x 16
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),  # Output: 128 x 8 x 8
+
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),  # Output: 256 x 4 x 4
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(256 * 4 * 4, 512),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(512, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
 
 
 class ResizableOverlay(QWidget):
@@ -87,12 +126,12 @@ class ResizableOverlay(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
 
         # Semi-transparent dark background inside the box
-        painter.setBrush(QColor(0, 0, 0, 40)) 
-        
+        painter.setBrush(QColor(0, 0, 0, 40))
+
         # Neon Green Bounding Box Pen
         pen = QPen(QColor(0, 255, 0), 3, Qt.SolidLine)
         painter.setPen(pen)
-        
+
         rect = self.rect().adjusted(1, 1, -1, -1)
         painter.drawRect(rect)
 
@@ -105,7 +144,7 @@ class ResizableOverlay(QWidget):
     def get_resize_direction(self, pos):
         x, y = pos.x(), pos.y()
         w, h = self.width(), self.height()
-        
+
         left = x < MARGIN
         right = x > w - MARGIN
         top = y < MARGIN
@@ -128,7 +167,7 @@ class ResizableOverlay(QWidget):
 
     def mouseMoveEvent(self, event):
         global_pos = event.globalPos()
-        
+
         # Update cursor shape based on position
         if not event.buttons() & Qt.LeftButton:
             direction = self.get_resize_direction(event.pos())
@@ -177,21 +216,31 @@ class ResizableOverlay(QWidget):
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[INFO] Using device: {device}")
+    if device.type == "cuda":
+        print(f"[INFO] GPU Name: {torch.cuda.get_device_name(0)}")
 
-    classes = [
-        "airplane", "automobile", "bird", "cat", "deer",
-        "dog", "frog", "horse", "ship", "truck"
-    ]
+    # 1. Load Class Labels from classes.json
+    if not os.path.exists(CLASSES_JSON_PATH):
+        print(
+            f"[ERROR] Classes file not found at '{CLASSES_JSON_PATH}'. Please run 'train.py' first."
+        )
+        return
 
+    with open(CLASSES_JSON_PATH, "r") as f:
+        classes = json.load(f)
+    print(f"[INFO] Loaded {len(classes)} classes from {CLASSES_JSON_PATH}: {classes}")
+
+    # 2. Check Model Weights
     if not os.path.exists(MODEL_PATH):
         print(f"[ERROR] Model weights not found at '{MODEL_PATH}'. Run 'train.py' first.")
         return
 
-    model = SimpleCNN(num_classes=len(classes)).to(device)
+    model = CIFARClassifierCNN(num_classes=len(classes)).to(device)
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
     model.eval()
     print("[INFO] Model weights loaded successfully.")
 
+    # 3. Image Preprocessing Pipeline
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((32, 32)),
