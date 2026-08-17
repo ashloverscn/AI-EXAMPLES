@@ -1,7 +1,6 @@
 # AI-EXAMPLES
 
-pip install --upgrade --force-reinstall torch torchvision opencv-python numpy matplotlib
-
+pip install --upgrade --force-reinstall torch torchvision opencv-python numpy matplotlib PyQt5 mss
 
 # Enable Case Senetive path in windows for your directory 
 
