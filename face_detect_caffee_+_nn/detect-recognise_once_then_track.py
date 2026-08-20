@@ -14,7 +14,7 @@ CACHE_REFRESH_INTERVAL = 30  # Re-run detector & classifier every N frames to up
 
 # Caffe Model Paths
 PROTOTXT_PATH = "deploy.prototxt"
-CAFFE_MODEL_PATH = "res10_300x300_ssd_iter_140000_fp16.caffemodel"
+CAFFE_MODEL_PATH = "res10_300x300_ssd_iter_140000.caffemodel"
 # =======================================================
 
 # 1. Device Configuration

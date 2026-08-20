@@ -19,7 +19,7 @@ MARGIN = 10                  # Edge threshold in pixels for resizing overlay
 
 # Caffe Model Paths
 PROTOTXT_PATH = "deploy.prototxt"
-CAFFE_MODEL_PATH = "res10_300x300_ssd_iter_140000_fp16.caffemodel"
+CAFFE_MODEL_PATH = "res10_300x300_ssd_iter_140000.caffemodel"
 # =======================================================
 
 
